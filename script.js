@@ -31,7 +31,11 @@
         bgBlur: null,
         progressBar: null,
         mainVideo: null,
-        mainImage: null
+        mainImage: null,
+        // 启动屏幕相关
+        startScreen: null,
+        startBtn: null,
+        preloadText: null
     };
 
     // ==================== 状态管理 ====================
@@ -46,7 +50,9 @@
         touchStartY: 0,
         isPiPActive: false,
         imageTimer: null,
-        abortController: null  // 用于取消请求
+        abortController: null,  // 用于取消请求
+        hasStarted: false,      // 是否已点击开始
+        isPreloading: false     // 是否正在预加载
     };
 
     // ==================== 初始化 ====================
@@ -57,7 +63,8 @@
         // 移除 select 的默认焦点，确保键盘事件正常工作
         DOM.apiSelect.blur();
         document.body.focus();
-        autoStart();
+        // 不再自动开始，等待用户点击开始按钮
+        // autoStart();
     }
 
     function cacheDOM() {
@@ -72,10 +79,17 @@
         DOM.progressBar = document.getElementById('progress-bar');
         DOM.mainVideo = document.getElementById('main-video');
         DOM.mainImage = document.getElementById('main-image');
+        // 启动屏幕相关
+        DOM.startScreen = document.getElementById('start-screen');
+        DOM.startBtn = document.getElementById('start-btn');
+        DOM.preloadText = document.getElementById('preload-text');
     }
 
     // ==================== 事件绑定 ====================
     function bindEvents() {
+        // 启动按钮点击
+        DOM.startBtn.addEventListener('click', handleStartClick);
+
         // 点击页面取消静音
         document.addEventListener('click', handleDocumentClick);
 
@@ -116,7 +130,158 @@
     }
 
     // ==================== 事件处理器 ====================
+
+    // 处理启动按钮点击
+    async function handleStartClick() {
+        if (state.isPreloading || state.hasStarted) return;
+
+        state.isPreloading = true;
+        DOM.startBtn.disabled = true;
+        DOM.startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 加载中...';
+        DOM.preloadText.textContent = '正在预加载资源...';
+
+        try {
+            // 开始预加载队列
+            await preloadAndStart();
+        } catch (error) {
+            console.error('Preload error:', error);
+            DOM.preloadText.textContent = '加载失败，请重试';
+            DOM.startBtn.disabled = false;
+            DOM.startBtn.innerHTML = '<i class="fas fa-play"></i> 重试';
+            state.isPreloading = false;
+        }
+    }
+
+    // 预加载并启动
+    async function preloadAndStart() {
+        const currentApi = DOM.apiSelect.value;
+        const isVideoApi = DOM.apiSelect.options[DOM.apiSelect.selectedIndex].parentElement.label === '视频';
+
+        DOM.preloadText.textContent = '正在获取资源 (0/' + CONFIG.preloadCount + ')...';
+
+        // 预加载多个资源
+        let loadedCount = 0;
+        const minPreload = 2; // 至少预加载2个才开始播放
+
+        for (let i = 0; i < CONFIG.preloadCount; i++) {
+            try {
+                const url = await fetchRealUrl(currentApi, !isVideoApi);
+
+                if (url && !state.queue.some(item => item.url === url)) {
+                    const mediaItem = {
+                        url: url,
+                        type: isVideoApi ? 'video' : 'image'
+                    };
+
+                    // 对于视频，预先创建video元素进行缓冲
+                    if (isVideoApi) {
+                        await preloadVideo(url);
+                    } else {
+                        // 预加载图片
+                        await preloadImage(url);
+                    }
+
+                    state.queue.push(mediaItem);
+                    loadedCount++;
+                    DOM.preloadText.textContent = `正在预加载 (${loadedCount}/${CONFIG.preloadCount})...`;
+
+                    // 达到最小预加载数后可以开始播放
+                    if (loadedCount >= minPreload && !state.hasStarted) {
+                        enterPlayer();
+                    }
+                }
+            } catch (e) {
+                console.warn('Preload item failed:', e);
+            }
+        }
+
+        // 如果还没有开始（加载数不足），仍然尝试开始
+        if (!state.hasStarted && state.queue.length > 0) {
+            enterPlayer();
+        } else if (state.queue.length === 0) {
+            throw new Error('No resources loaded');
+        }
+
+        state.isPreloading = false;
+    }
+
+    // 预加载单个视频
+    function preloadVideo(url) {
+        return new Promise((resolve, reject) => {
+            const video = document.createElement('video');
+            video.preload = 'auto';
+            video.muted = true;
+
+            const timeout = setTimeout(() => {
+                video.src = '';
+                resolve(); // 超时也继续，不阻塞
+            }, 8000);
+
+            video.addEventListener('canplaythrough', () => {
+                clearTimeout(timeout);
+                video.src = '';
+                resolve();
+            }, { once: true });
+
+            video.addEventListener('error', () => {
+                clearTimeout(timeout);
+                reject(new Error('Video preload failed'));
+            }, { once: true });
+
+            // 至少加载一些数据就可以了
+            video.addEventListener('loadeddata', () => {
+                clearTimeout(timeout);
+                video.src = '';
+                resolve();
+            }, { once: true });
+
+            video.src = url;
+            video.load();
+        });
+    }
+
+    // 预加载单个图片
+    function preloadImage(url) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+
+            const timeout = setTimeout(() => {
+                resolve(); // 超时也继续
+            }, 5000);
+
+            img.onload = () => {
+                clearTimeout(timeout);
+                resolve();
+            };
+
+            img.onerror = () => {
+                clearTimeout(timeout);
+                reject(new Error('Image preload failed'));
+            };
+
+            img.src = url;
+        });
+    }
+
+    // 进入播放器
+    function enterPlayer() {
+        if (state.hasStarted) return;
+        state.hasStarted = true;
+
+        // 淡出启动屏幕
+        DOM.startScreen.style.opacity = '0';
+        setTimeout(() => {
+            DOM.startScreen.style.display = 'none';
+        }, 500);
+
+        // 开始播放
+        autoStart();
+    }
+
     function handleDocumentClick(e) {
+        // 如果还在启动屏幕，不处理
+        if (!state.hasStarted) return;
+
         // 排除控制按钮和选择框的点击
         if (e.target.closest('.control-btn') ||
             e.target.closest('.top-bar') ||
@@ -155,6 +320,9 @@
     }
 
     function handleKeydown(e) {
+        // 如果还在启动屏幕，不处理
+        if (!state.hasStarted) return;
+
         // 如果焦点在 select 上，阻止默认行为
         const isSelectFocused = document.activeElement === DOM.apiSelect;
 
@@ -200,6 +368,8 @@
     }
 
     function handleWheel(e) {
+        if (!state.hasStarted) return;
+
         const now = Date.now();
         if (now - state.lastWheelTime > CONFIG.wheelDebounce) {
             if (e.deltaY > 0) {
@@ -212,10 +382,13 @@
     }
 
     function handleTouchStart(e) {
+        if (!state.hasStarted) return;
         state.touchStartY = e.touches[0].clientY;
     }
 
     function handleTouchEnd(e) {
+        if (!state.hasStarted) return;
+
         const touchEndY = e.changedTouches[0].clientY;
         const diffY = state.touchStartY - touchEndY;
 

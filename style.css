@@ -75,6 +75,23 @@ body, html {
     background: #e6254a;
 }
 
+#start-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.8;
+    transform: none;
+}
+
+#start-btn i {
+    margin-right: 8px;
+}
+
+.preload-status {
+    margin-bottom: 20px;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 14px;
+    min-height: 20px;
+}
+
 /* 背景模糊层 */
 .bg-blur {
     position: absolute;

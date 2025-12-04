@@ -20,3 +20,4 @@ jk：http://api.xingchenfu.xyz/API/jk.php
 舔狗：http://api.xingchenfu.xyz/API/tgbj.php
 抱着美女吸饮料：http://api.xingchenfu.xyz/API/xi.php
 
+url:https://vedio-display.pages.dev/
