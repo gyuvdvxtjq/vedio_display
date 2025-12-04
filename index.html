@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>沉浸式媒体播放器</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- 引入 FontAwesome 图标 (使用 CDN) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+
+        <!-- 背景模糊层 -->
+        <div class="bg-blur" id="bg-blur"></div>
+
+        <!-- 媒体显示区域 -->
+        <div class="media-wrapper" id="media-wrapper">
+            <!-- 主播放器 (负责声音和正常观看) -->
+            <video id="main-video" playsinline webkit-playsinline x5-playsinline style="display: none;"></video>
+            
+            <!-- 图片显示 -->
+            <img id="main-image" style="display: none;">
+            
+        </div>
+
+        <!-- 底部进度条 -->
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+
+        <!-- 加载动画 -->
+        <div class="loading-spinner" id="loading-spinner"></div>
+
+        <!-- 覆盖层 -->
+        <div class="overlay"></div>
+
+        <!-- 顶部选择栏 -->
+        <div class="top-bar">
+            <i class="fas fa-list"></i>
+            <select id="api-select">
+                <optgroup label="视频">
+                    <option value="http://api.xingchenfu.xyz/API/bsxl.php">白丝</option>
+                    <option value="http://api.xingchenfu.xyz/API/nvda.php">女大</option>
+                    <option value="http://api.xingchenfu.xyz/API/cossp.php">Cosplay</option>
+                    <option value="http://api.xingchenfu.xyz/API/dlzp.php">自拍</option>
+                    <option value="http://api.xingchenfu.xyz/API/wmsc.php">身材</option>
+                    <option value="http://api.xingchenfu.xyz/API/tianmei.php">甜妹</option>
+                    <option value="http://api.xingchenfu.xyz/API/cdxl.php">穿搭</option>
+                    <option value="http://api.xingchenfu.xyz/API/yzxl.php">玉足</option>
+                    <option value="http://api.xingchenfu.xyz/API/bianzhuang.php">变装</option>
+                    <option value="http://api.xingchenfu.xyz/API/rwsp.php">热舞</option>
+                    <option value="http://api.xingchenfu.xyz/API/gzlxjj.php">高质量</option>
+                    <option value="http://api.xingchenfu.xyz/API/jk.php">JK</option>
+                </optgroup>
+                <optgroup label="图片">
+                    <option value="http://api.xingchenfu.xyz/API/hstp.php">黑丝</option>
+                    <option value="http://api.xingchenfu.xyz/API/beauty.php">高清美女</option>
+                    <option value="http://api.xingchenfu.xyz/API/wsb.php">写真</option>
+                    <option value="http://api.xingchenfu.xyz/API/tgbj.php">舔狗</option>
+                    <option value="http://api.xingchenfu.xyz/API/xi.php">抱着美女吸饮料</option>
+                </optgroup>
+            </select>
+        </div>
+
+        <!-- 右侧控制按钮 -->
+        <div class="controls-layer">
+            <button class="control-btn" id="mute-btn" title="静音/取消静音">
+                <i class="fas fa-volume-mute"></i>
+            </button>
+            <button class="control-btn" id="next-btn" title="下一个 (↓)">
+                <i class="fas fa-arrow-down"></i>
+            </button>
+            <button class="control-btn" id="pip-btn" title="画中画">
+                <i class="fas fa-external-link-alt"></i>
+            </button>
+            <button class="control-btn" id="download-btn" title="下载当前">
+                <i class="fas fa-download"></i>
+            </button>
+        </div>
+
+        <!-- 提示框 -->
+        <div class="toast" id="toast">提示信息</div>
+
+        <!-- 快捷键说明 -->
+        <div class="shortcuts-hint">
+            ↑↓ 切换 | ←→ 快进快退 | Space 暂停 | M 静音 | F 全屏 | P 画中画
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
